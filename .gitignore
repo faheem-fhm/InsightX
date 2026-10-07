@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.local
+
+# Env & Data
+.env
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+*.db
+*.sqlite
+
+.env
+.env.*
+!.env.example

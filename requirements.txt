@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # --- Web Framework & Server ---
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
@@ -34,7 +34,7 @@ python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
 # --- Testing ---
-=======
+
 # --- Web Framework & Server ---
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
@@ -70,5 +70,5 @@ python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
 # --- Testing ---
->>>>>>> 35c0ad3 (Update production URLs)
+
 pytest>=8.1.1

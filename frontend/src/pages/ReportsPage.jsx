@@ -443,75 +443,101 @@ export default function ReportsPage() {
           )}
 
           {/* User-Added Root Cause Analyses & Feature Drivers (Pinned from Root Cause Studio) */}
-          {savedRootCauses.length > 0 && (
-            <div className="space-y-3 pt-3 border-t border-slate-800">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  User-Added Root Cause Findings & Feature Drivers ({savedRootCauses.length})
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  Custom selections saved from Root Cause Studio
-                </span>
-              </div>
+          {(() => {
+            const defaultDriverFeatures = new Set(
+              (rootCause?.drivers || ml?.drivers || []).slice(0, 4).map((d) => (d.feature || d.feature_label || "").toLowerCase())
+            );
+            const defaultTargetLower = (currentDataset?.target_column || "").toLowerCase();
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {savedRootCauses.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-2.5 relative group shadow-md"
-                  >
-                    <button
-                      onClick={() => handleRemoveRootCause(item.id)}
-                      className="print-hide absolute top-3 right-3 p-1 rounded-md bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition opacity-0 group-hover:opacity-100"
-                      title="Remove from report"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+            const displayedRootCauses = savedRootCauses.filter((item, index, self) => {
+              const itemKey = `${item.type}_${item.target || ''}_${item.feature || item.id}`;
+              if (self.findIndex((other) => `${other.type}_${other.target || ''}_${other.feature || other.id}` === itemKey) !== index) {
+                return false;
+              }
 
-                    <div className="flex items-center gap-2 flex-wrap pr-8">
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 uppercase">
-                        {item.type === "overall" ? "Executive Verdict" : `Driver: ${item.percentage || 0}% Impact`}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-indigo-400">
-                        TARGET: {item.target}
-                      </span>
-                    </div>
+              if (item.type === "driver") {
+                const itemTarget = (item.target || "").toLowerCase();
+                const itemFeature = (item.feature || "").toLowerCase();
+                const isDefaultTarget = !itemTarget || itemTarget === defaultTargetLower;
+                if (isDefaultTarget && defaultDriverFeatures.has(itemFeature)) {
+                  return false;
+                }
+              }
+              return true;
+            });
 
-                    {item.type === "overall" ? (
-                      <div className="space-y-1.5 text-xs">
-                        <h4 className="font-bold text-slate-200">{item.what_happened}</h4>
-                        <p className="text-slate-300 leading-relaxed font-medium">{item.why_it_happened}</p>
-                        {item.recommendations && item.recommendations.length > 0 && (
-                          <div className="pt-1 space-y-1">
-                            {item.recommendations.map((rec, rIdx) => (
-                              <div key={rIdx} className="text-[11px] text-emerald-400 flex items-start gap-1.5">
-                                <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                <span>{typeof rec === "object" ? (rec.detail || rec.action) : rec}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-slate-200">{item.feature}</h4>
-                          <span className="font-mono text-indigo-300 font-extrabold">{item.percentage}% Impact</span>
-                        </div>
-                        <p className="text-slate-300 text-[11px] leading-relaxed">{item.why_explanation}</p>
-                        {item.how_to_prevent && (
-                          <p className="text-[10px] text-emerald-400/90 leading-relaxed">
-                            <strong className="text-emerald-400">Action: </strong>{item.how_to_prevent}
-                          </p>
-                        )}
-                      </div>
-                    )}
+            if (displayedRootCauses.length === 0) return null;
+
+            return (
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    User-Added Root Cause Findings & Feature Drivers ({displayedRootCauses.length})
                   </div>
-                ))}
+                  <span className="text-[11px] text-slate-400">
+                    Custom selections saved from Root Cause Studio
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {displayedRootCauses.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-2.5 relative group shadow-md"
+                    >
+                      <button
+                        onClick={() => handleRemoveRootCause(item.id)}
+                        className="print-hide absolute top-3 right-3 p-1 rounded-md bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition opacity-0 group-hover:opacity-100"
+                        title="Remove from report"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="flex items-center gap-2 flex-wrap pr-8">
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 uppercase">
+                          {item.type === "overall" ? "Executive Verdict" : `Driver: ${item.percentage || 0}% Impact`}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-indigo-400">
+                          TARGET: {item.target}
+                        </span>
+                      </div>
+
+                      {item.type === "overall" ? (
+                        <div className="space-y-1.5 text-xs">
+                          <h4 className="font-bold text-slate-200">{item.what_happened}</h4>
+                          <p className="text-slate-300 leading-relaxed font-medium">{item.why_it_happened}</p>
+                          {item.recommendations && item.recommendations.length > 0 && (
+                            <div className="pt-1 space-y-1">
+                              {item.recommendations.map((rec, rIdx) => (
+                                <div key={rIdx} className="text-[11px] text-emerald-400 flex items-start gap-1.5">
+                                  <CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                  <span>{typeof rec === "object" ? (rec.detail || rec.action) : rec}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-slate-200">{item.feature}</h4>
+                            <span className="font-mono text-indigo-300 font-extrabold">{item.percentage}% Impact</span>
+                          </div>
+                          <p className="text-slate-300 text-[11px] leading-relaxed">{item.why_explanation}</p>
+                          {item.how_to_prevent && (
+                            <p className="text-[10px] text-emerald-400/90 leading-relaxed">
+                              <strong className="text-emerald-400">Action: </strong>{item.how_to_prevent}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* ── Section 3: How to Prevent & Optimize (Strategic Action Plan) ── */}

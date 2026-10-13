@@ -68,6 +68,10 @@ export default function RootCausePage() {
     if (isItemInReport(item.id)) {
       updated = savedReportItems.filter((it) => it.id !== item.id);
     } else {
+      const alreadyExists = savedReportItems.some(
+        (it) => it.id === item.id || (it.type === item.type && it.target === item.target && it.feature === item.feature)
+      );
+      if (alreadyExists) return;
       updated = [...savedReportItems, { ...item, added_at: new Date().toLocaleTimeString() }];
     }
     setSavedReportItems(updated);
@@ -352,6 +356,8 @@ export default function RootCausePage() {
                 how_to_prevent: driver.how_to_prevent
               };
               const inReport = isItemInReport(driverId);
+              const isDefaultTarget = !selectedTarget || selectedTarget.toLowerCase() === (currentDataset?.target_column || "").toLowerCase();
+              const isDefaultReportDriver = isDefaultTarget && idx < 4;
 
               return (
                 <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 flex flex-col justify-between">
@@ -375,27 +381,30 @@ export default function RootCausePage() {
                   </div>
                   <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between mt-2">
                     <span className="text-[10px] text-slate-500 font-mono">Driver #{idx + 1}</span>
-                    <button
-                      onClick={() => toggleReportItem(driverItem)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition ${
-                        inReport
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30"
-                          : "bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 hover:bg-indigo-950/40"
-                      }`}
-                      title={inReport ? "Remove driver from report" : "Add driver to report"}
-                    >
-                      {inReport ? (
-                        <>
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          In Report (Remove)
-                        </>
-                      ) : (
-                        <>
-                          <PlusCircle className="w-3 h-3 text-indigo-400" />
-                          + Add to Report
-                        </>
-                      )}
-                    </button>
+                    {isDefaultReportDriver ? (
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        In Executive Report
+                      </span>
+                    ) : inReport ? (
+                      <button
+                        onClick={() => toggleReportItem(driverItem)}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30"
+                        title="Remove driver from report"
+                      >
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        In Report (Remove)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => toggleReportItem(driverItem)}
+                        className="text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1 transition bg-slate-800 text-indigo-300 border border-slate-700 hover:border-indigo-500/50 hover:bg-indigo-950/40"
+                        title="Add driver to report"
+                      >
+                        <PlusCircle className="w-3 h-3 text-indigo-400" />
+                        + Add to Report
+                      </button>
+                    )}
                   </div>
                 </div>
               );

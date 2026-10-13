@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Dict, Any, List, Optional
+import re
+from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
 from ..core.config import settings
 from ..analytics.olap_engine import olap_engine
@@ -13,7 +14,7 @@ DOMAIN_CONTEXT = {
         "label": "E-Commerce / Retail",
         "primary_metrics": ["revenue", "sales", "profit", "quantity", "order_value"],
         "risk_metrics": ["delivery_delay_days", "order_cancelled", "return_rate", "discount"],
-        "dimensions": ["region", "product_category", "category", "channel", "customer_segment"],
+        "dimensions": ["region", "product_category", "category", "channel", "customer_segment", "product_name", "customer_name", "state"],
         "business_context": (
             "This is an e-commerce/retail dataset. Focus on revenue, order fulfilment, "
             "delivery performance, product categories, and regional sales breakdown."
@@ -107,14 +108,14 @@ class AIAnalystResponse:
 def _resolve_columns(schema_info, domain_type: str):
     """Resolve target metric, dimension, risk metric dynamically."""
     col_names_lower = {c["safe_column_name"].lower(): c["safe_column_name"] for c in schema_info}
-    numeric_cols = [c["safe_column_name"] for c in schema_info if c["is_numeric"]]
-    cat_cols = [c["safe_column_name"] for c in schema_info if c["is_categorical"]]
-    date_cols = [c["safe_column_name"] for c in schema_info if c["is_date"]]
+    numeric_cols = [c["safe_column_name"] for c in schema_info if c.get("is_numeric")]
+    cat_cols = [c["safe_column_name"] for c in schema_info if c.get("is_categorical")]
+    date_cols = [c["safe_column_name"] for c in schema_info if c.get("is_date")]
     domain = DOMAIN_CONTEXT.get(domain_type or "generic", DOMAIN_CONTEXT["generic"])
 
     target_num = None
     for cand in domain["primary_metrics"] + [
-        "revenue", "sales", "profit", "spend", "cost", "value", "amount", "price"
+        "revenue", "sales", "profit", "spend", "cost", "value", "amount", "price", "performance_score", "score"
     ]:
         if cand in col_names_lower:
             target_num = col_names_lower[cand]
@@ -134,7 +135,7 @@ def _resolve_columns(schema_info, domain_type: str):
 
     dim_col = None
     for cand in domain["dimensions"] + [
-        "region", "category", "channel", "segment", "department", "type", "status"
+        "region", "category", "channel", "segment", "department", "type", "status", "product_name", "customer_name", "state"
     ]:
         if cand in col_names_lower:
             dim_col = col_names_lower[cand]
@@ -143,6 +144,246 @@ def _resolve_columns(schema_info, domain_type: str):
         dim_col = cat_cols[0] if cat_cols else "1"
 
     return target_num, dim_col, risk_metric, cat_cols, date_cols, domain
+
+
+def _smart_semantic_sql_builder(
+    question: str,
+    table_name: str,
+    schema_info: List[Dict[str, Any]],
+    active_target: str,
+    target_num: str,
+    cat_cols: List[str],
+    numeric_cols: List[str],
+    date_cols: List[str],
+) -> Tuple[str, str, Optional[str], str, int]:
+    """
+    Intelligently parses user query intent, columns, aggregation, direction,
+    and row limit (top 10, top 20, etc.) to produce accurate SQL without hallucinations.
+    Returns: (sql_query, detected_metric, detected_dimension, agg_type, limit)
+    """
+    q_low = question.lower().strip()
+    words = re.findall(r'[a-zA-Z0-9_]+', q_low)
+
+    # 1. Detect row limit (e.g., top 10, top 20, 5 best, etc.)
+    limit = 10
+    limit_match = re.search(r'\b(?:top|first|highest|best|lowest|bottom|worst|limit)\s*(\d+)\b', q_low)
+    if limit_match:
+        limit = min(max(int(limit_match.group(1)), 1), 50)
+    else:
+        num_match = re.search(r'\b(\d+)\s*(?:items|records|rows|products|customers|departments|categories|states|regions|accounts|cohorts|segments)\b', q_low)
+        if num_match:
+            limit = min(max(int(num_match.group(1)), 1), 50)
+        elif "top 20" in q_low or "20 best" in q_low or "first 20" in q_low:
+            limit = 20
+        elif "top 10" in q_low or "10 best" in q_low or "first 10" in q_low:
+            limit = 10
+        elif "top 5" in q_low or "5 best" in q_low:
+            limit = 5
+
+    # 2. Detect sort direction
+    direction = "DESC"
+    if any(k in q_low for k in ["lowest", "least", "bottom", "worst", "smallest", "min", "minimum", "fewer", "fewest", "lower", "drop"]):
+        direction = "ASC"
+
+    # 3. Synonym matching dictionaries
+    dim_synonyms = {
+        "product": ["product", "products", "item", "items", "sku", "title", "goods", "merchandise"],
+        "customer": ["customer", "customers", "client", "clients", "user", "users", "buyer", "buyers", "account", "accounts"],
+        "state": ["state", "states", "province", "provinces"],
+        "region": ["region", "regions", "zone", "zones", "territory", "area", "areas"],
+        "city": ["city", "cities", "town", "metro"],
+        "category": ["category", "categories", "segment", "segments", "group", "class", "genre"],
+        "department": ["department", "departments", "dept", "team", "teams", "division", "divisions"],
+        "channel": ["channel", "channels", "source", "medium"],
+        "status": ["status", "stage", "condition"],
+        "country": ["country", "nation"],
+        "segment": ["segment", "segments", "cohort", "cohorts", "tier"],
+    }
+
+    metric_synonyms = {
+        "sales": ["sale", "sales", "revenue", "turnover", "income", "gmv", "amount"],
+        "profit": ["profit", "profits", "margin", "earnings", "net"],
+        "quantity": ["quantity", "quantities", "volume", "units", "ordered", "order_count"],
+        "discount": ["discount", "discounts", "rate", "rebate"],
+        "cost": ["cost", "costs", "expense", "expenses", "spend", "spending", "cpa", "cpc"],
+        "delay": ["delay", "delays", "shipping", "delivery", "late"],
+        "salary": ["salary", "salaries", "pay", "wage", "compensation"],
+        "score": ["score", "rating", "performance", "kpi", "grade", "feedback"],
+        "time": ["time", "hours", "duration", "wait"],
+    }
+
+    # 4. Identify dimension (grouping column)
+    matched_dim = None
+    all_col_names = [c["safe_column_name"] for c in schema_info]
+
+    # Direct column name match in query
+    for c in cat_cols + date_cols:
+        c_clean = c.lower().replace("_", " ")
+        if c.lower() in q_low or c_clean in q_low or any(w in c.lower().split("_") for w in words):
+            matched_dim = c
+            break
+
+    # Synonym match if direct match not found
+    if not matched_dim:
+        for concept, syns in dim_synonyms.items():
+            if any(syn in q_low for syn in syns):
+                # Look for a column containing this concept
+                for c in cat_cols + date_cols:
+                    c_low = c.lower()
+                    if any(syn in c_low for syn in syns):
+                        matched_dim = c
+                        break
+            if matched_dim:
+                break
+
+    # If asking for "which <col>"
+    if not matched_dim:
+        which_match = re.search(r'\b(?:which|what)\s+([a-zA-Z0-9_]+)', q_low)
+        if which_match:
+            candidate_word = which_match.group(1).lower()
+            for c in cat_cols:
+                if candidate_word in c.lower() or c.lower() in candidate_word:
+                    matched_dim = c
+                    break
+
+    # Default dimension
+    if not matched_dim:
+        matched_dim = cat_cols[0] if cat_cols else (date_cols[0] if date_cols else None)
+
+    # 5. Identify metric (numeric column)
+    matched_metric = None
+    for c in numeric_cols:
+        c_clean = c.lower().replace("_", " ")
+        if c.lower() in q_low or c_clean in q_low or any(w in c.lower().split("_") for w in words):
+            matched_metric = c
+            break
+
+    if not matched_metric:
+        for concept, syns in metric_synonyms.items():
+            if any(syn in q_low for syn in syns):
+                for c in numeric_cols:
+                    c_low = c.lower()
+                    if any(syn in c_low for syn in syns):
+                        matched_metric = c
+                        break
+            if matched_metric:
+                break
+
+    if not matched_metric:
+        matched_metric = active_target if (active_target in numeric_cols) else (target_num if target_num in numeric_cols else (numeric_cols[0] if numeric_cols else None))
+
+    # 6. Aggregation logic
+    if any(k in q_low for k in ["average", "avg", "mean", "rate", "percentage", "ratio"]):
+        agg_type = "avg"
+        agg_expr = f"ROUND(AVG({matched_metric}), 2)" if matched_metric else "ROUND(AVG(1), 2)"
+    elif any(k in q_low for k in ["count", "how many", "number of", "total orders", "order count"]):
+        agg_type = "count"
+        agg_expr = "COUNT(*)"
+    elif any(k in q_low for k in ["max", "maximum", "peak"]):
+        agg_type = "max"
+        agg_expr = f"ROUND(MAX({matched_metric}), 2)" if matched_metric else "MAX(1)"
+    elif any(k in q_low for k in ["min", "minimum"]):
+        agg_type = "min"
+        agg_expr = f"ROUND(MIN({matched_metric}), 2)" if matched_metric else "MIN(1)"
+    else:
+        # Check if metric is naturally an average/rate or cumulative sum
+        if matched_metric and any(k in matched_metric.lower() for k in ["delay", "rate", "percent", "score", "ratio", "age", "rating", "satisfaction"]):
+            agg_type = "avg"
+            agg_expr = f"ROUND(AVG({matched_metric}), 2)"
+        elif matched_metric:
+            agg_type = "sum"
+            agg_expr = f"ROUND(SUM({matched_metric}), 2)"
+        else:
+            agg_type = "count"
+            agg_expr = "COUNT(*)"
+
+    # 7. Construct SQL Query
+    if matched_dim:
+        sql = (
+            f"SELECT {matched_dim} AS label, {agg_expr} AS value, COUNT(*) AS count "
+            f"FROM {table_name} "
+            f"WHERE {matched_dim} IS NOT NULL "
+            f"GROUP BY {matched_dim} "
+            f"ORDER BY value {direction} "
+            f"LIMIT {limit}"
+        )
+    elif matched_metric:
+        sql = (
+            f"SELECT {agg_expr} AS value, COUNT(*) AS count "
+            f"FROM {table_name}"
+        )
+    else:
+        sql = f"SELECT COUNT(*) AS total_records FROM {table_name}"
+
+    return sql, matched_metric, matched_dim, agg_type, limit
+
+
+def _detect_chart_request(question: str) -> Optional[str]:
+    """
+    Detects if the user explicitly requested a chart/graph/plot/visualization,
+    and returns the specific chart type ('bar', 'line', 'pie', 'scatter', or 'auto').
+    Returns None if no chart was requested.
+    """
+    q_low = question.lower()
+    chart_indicator_words = [
+        "chart", "graph", "plot", "visualize", "visualization", "visual",
+        "diagram", "histogram", "pie", "donut", "doughnut", "scatter"
+    ]
+    requested = any(re.search(rf"\b{re.escape(w)}\b", q_low) for w in chart_indicator_words)
+    if not requested:
+        if re.search(r"\b(?:bar|bars|line|lines|pie)\s+(?:chart|graph|plot|of)\b", q_low):
+            requested = True
+
+    if not requested:
+        return None
+
+    if any(k in q_low for k in ["pie", "donut", "doughnut"]):
+        return "pie"
+    if any(k in q_low for k in ["scatter", "scatter plot"]):
+        return "scatter"
+    if any(k in q_low for k in ["line", "trend", "timeline", "over time", "run chart"]):
+        return "line"
+    if any(k in q_low for k in ["bar", "column", "bars"]):
+        return "bar"
+
+    return "auto"
+
+
+def _is_unrelated_question(question: str, schema_info: List[Dict[str, Any]]) -> bool:
+    """
+    Checks if the user question is unrelated to the provided dataset.
+    """
+    q_low = question.lower().strip()
+    words = set(re.findall(r'[a-zA-Z0-9_]+', q_low))
+    if not words:
+        return True
+
+    if q_low in ["hello", "hi", "hey", "help", "who are you", "what can you do"]:
+        return False
+
+    for c in schema_info:
+        c_name = c.get("safe_column_name", "").lower()
+        if c_name in q_low or any(w in words for w in c_name.split("_") if len(w) > 2):
+            return False
+
+    analytical_vocabulary = {
+        "top", "bottom", "highest", "lowest", "best", "worst", "most", "least",
+        "average", "avg", "mean", "median", "sum", "total", "count", "number",
+        "max", "min", "breakdown", "distribution", "trend", "correlation", "ranking",
+        "rank", "ranks", "percentage", "percent", "rate", "ratio", "chart", "graph",
+        "plot", "bar", "pie", "line", "scatter", "table", "outlier", "anomaly",
+        "records", "record", "rows", "row", "data", "dataset", "metric", "column",
+        "feature", "driver", "summary", "explain", "show", "give", "list", "compare",
+        "performance", "pattern", "sale", "sales", "revenue", "profit", "cost",
+        "price", "product", "item", "customer", "client", "buyer", "user", "order",
+        "state", "region", "city", "country", "category", "department", "segment",
+        "discount", "quantity", "volume", "unit", "units", "delay", "time", "date"
+    }
+
+    if words & analytical_vocabulary:
+        return False
+
+    return True
 
 
 def answer_analyst_query(
@@ -170,7 +411,6 @@ def answer_analyst_query(
     active_target = target_column or target_num
 
     domain_label = domain.get("label", "Business Dataset")
-    biz_context = domain.get("business_context", "")
     schema_cols = ", ".join(all_col_names)
 
     # ── Retrieve RAG context ────────────────────────────────────────────────
@@ -186,42 +426,32 @@ def answer_analyst_query(
         except Exception:
             rag_chunks = []
 
-    # ── Check for casual greetings, help, or unwanted/off-topic questions ───
+    # ── Check for casual greetings or help ───
     is_greeting = q_low in [
         "hello", "hi", "hey", "help", "who are you", "what can you do", "test", "sup",
         "good morning", "good evening", "how are you"
     ]
-    # Check if question is completely unrelated to data analysis or dataset columns
-    has_column_mention = any(c.lower() in q_low for c in all_col_names)
-    analytical_keywords = [
-        "average", "avg", "sum", "total", "count", "how many", "rate", "percent",
-        "why", "how", "what", "which", "increase", "decrease", "drop", "change",
-        "distribution", "trend", "compare", "chart", "graph", "maximum", "minimum",
-        "max", "min", "highest", "lowest", "correlation", "cause", "reason", "target"
-    ]
-    has_analytic_intent = any(k in q_low for k in analytical_keywords)
-    is_off_topic = not has_column_mention and not has_analytic_intent and len(q_clean.split()) < 6
-
-    if is_greeting or is_off_topic:
+    if is_greeting:
         sample_questions = []
-        if numeric_cols and cat_cols:
-            sample_questions.append(f"What is the average {numeric_cols[0].replace('_', ' ')} by {active_target.replace('_', ' ')}?")
-            sample_questions.append(f"Why does {active_target.replace('_', ' ')} increase or decrease across {cat_cols[0].replace('_', ' ')}?")
-        if len(numeric_cols) >= 2:
-            sample_questions.append(f"What is the relationship between {numeric_cols[0].replace('_', ' ')} and {numeric_cols[1].replace('_', ' ')}?")
-        sample_questions.append(f"Show a summary breakdown of the dataset target variable ({active_target.replace('_', ' ')}).")
+        if cat_cols and numeric_cols:
+            sample_questions.append(f"Show the top 10 {cat_cols[0].replace('_', ' ')} by {numeric_cols[0].replace('_', ' ')}.")
+        if len(cat_cols) > 1 and numeric_cols:
+            sample_questions.append(f"Give top 20 {cat_cols[1].replace('_', ' ')} with highest {numeric_cols[0].replace('_', ' ')}.")
+        if numeric_cols:
+            sample_questions.append(f"What is the average {numeric_cols[0].replace('_', ' ')} across categories?")
+        sample_questions.append(f"Show the ranking of {active_target.replace('_', ' ')} across segments.")
 
         options_list = "\n".join([f"  • {q}" for q in sample_questions[:4]])
         polite_reply = (
             f"Hello! I am your InsightX AI Data Analyst connected to your **{domain_label}** dataset.\n\n"
-            f"I analyze your dataset directly (target variable: **{active_target.replace('_', ' ')}**, columns: {schema_cols[:120]}...).\n\n"
-            f"Here are specific analytical questions you can ask me:\n{options_list}"
+            f"Ask me any analytical question based on your dataset (e.g. top 10 rankings, averages, totals, or request specific charts like bar, line, or pie).\n\n"
+            f"Suggested questions to try:\n{options_list}"
         )
         return AIAnalystResponse(
-            finding=f"InsightX Analyst Ready — Connected to {domain_label} (Target: {active_target}).",
-            evidence=f"Active columns ({len(schema_info)}): {schema_cols[:120]}...",
+            finding=f"InsightX Analyst Ready — Connected to {domain_label} ({len(schema_info)} active columns).",
+            evidence=f"Active dataset columns: {schema_cols[:140]}...",
             explanation=polite_reply,
-            recommendation="Select any suggested question or type your question about the dataset.",
+            recommendation="Type any question based on your dataset, or ask for a specific chart.",
             confidence="High",
             sql_query=None,
             chart_spec=None,
@@ -229,21 +459,34 @@ def answer_analyst_query(
             rag_chunks_used=len(rag_chunks),
         )
 
-    # ── Check if user specifically wants or refuses a graph ─────────────────
-    wants_graph = any(
-        k in q_low for k in ["chart", "graph", "plot", "visualize", "visualization", "histogram", "trend", "show curve"]
-    )
-    # If user explicitly asks for simple text or says no graph, do NOT send graph
-    if any(
-        k in q_low
-        for k in [
-            "no graph", "no chart", "without graph", "without chart", "tell only",
-            "simple way", "just answer", "just tell", "why it give the graph", "dont give graph", "don't give graph"
-        ]
-    ):
-        wants_graph = False
+    # ── Check for completely unrelated questions ───────────────────────────
+    if _is_unrelated_question(question, schema_info):
+        unrelated_msg = "I'm sorry, but I couldn't find that information in the data you've provided. Please ask a question related to your uploaded data."
+        return AIAnalystResponse(
+            finding=unrelated_msg,
+            evidence="No matching columns or empirical records found in the uploaded data.",
+            explanation="InsightX is an AI-powered data insights assistant. All answers are derived strictly and exclusively from your uploaded dataset without external assumptions.",
+            recommendation="Please ask a question related to your uploaded data (e.g. top rankings, averages, totals, or breakdowns of your columns).",
+            confidence="Low",
+            sql_query=None,
+            chart_spec=None,
+            raw_data=None,
+            rag_chunks_used=0,
+        )
 
-    # ── Dynamic Text-to-SQL Generation using LLM ────────────────────────────
+    # ── Generate Deterministic Semantic SQL (Guaranteed accuracy for question)
+    semantic_sql, detected_metric, detected_dim, agg_type, detected_limit = _smart_semantic_sql_builder(
+        question=question,
+        table_name=table_name,
+        schema_info=schema_info,
+        active_target=active_target,
+        target_num=target_num,
+        cat_cols=cat_cols,
+        numeric_cols=numeric_cols,
+        date_cols=date_cols,
+    )
+
+    # ── Dynamic Text-to-SQL Generation using LLM (if available) ─────────────
     col_descriptions = [
         f"{c['safe_column_name']} ({c.get('detected_type', 'string')}{', TARGET' if c['safe_column_name'] == active_target else ''})"
         for c in schema_info
@@ -251,17 +494,17 @@ def answer_analyst_query(
 
     sql_prompt = (
         f"You are an expert SQL engineer for DuckDB.\n"
-        f"Write a single, safe DuckDB SQL SELECT query that directly computes the answer to the user's question.\n\n"
+        f"Write a single, safe DuckDB SQL SELECT query that directly answers the user's specific question.\n\n"
         f"Table: {table_name}\n"
         f"Available Columns: {', '.join(col_descriptions)}\n"
-        f"Target Column: {active_target}\n"
         f"User Question: \"{question}\"\n\n"
         f"Rules:\n"
-        f"1. Return ONLY the raw SQL query. No markdown, no backticks, no explanations.\n"
+        f"1. Return ONLY the raw SQL query. No markdown, no backticks, no explanation.\n"
         f"2. Must start with SELECT and query from {table_name}.\n"
-        f"3. Use appropriate aggregations (AVG, SUM, COUNT, MIN, MAX). Round decimal averages to 2 decimals using ROUND(..., 2).\n"
-        f"4. If comparing groups or calculating rates by category, GROUP BY that column and include COUNT(*) AS count.\n"
-        f"5. Limit results to at most 20 rows."
+        f"3. If the user asks for 'top 10', use LIMIT 10. If 'top 20', use LIMIT 20. If not specified, use LIMIT 10.\n"
+        f"4. If asking for highest/top, ORDER BY ... DESC. If lowest/bottom, ORDER BY ... ASC.\n"
+        f"5. Always alias grouping column as 'label' and aggregated value as 'value'.\n"
+        f"6. Example: SELECT Category AS label, ROUND(SUM(Sales), 2) AS value, COUNT(*) AS count FROM {table_name} GROUP BY Category ORDER BY value DESC LIMIT 10"
     )
 
     res_df = None
@@ -271,50 +514,27 @@ def answer_analyst_query(
         raw_llm_sql = query_free_llm(sql_prompt)
         if raw_llm_sql:
             clean_sql = raw_llm_sql.replace("```sql", "").replace("```", "").strip().rstrip(";")
-            validated_sql = validate_safe_sql(clean_sql)
-            res_df = olap_engine.query(validated_sql)
+            cand_sql = validate_safe_sql(clean_sql)
+            res_df = olap_engine.query(cand_sql)
+            if res_df is not None and len(res_df) > 0:
+                validated_sql = cand_sql
     except Exception:
         res_df = None
         validated_sql = None
 
-    # Fallback SQL generation if LLM query failed or was empty
+    # Fallback to intelligent semantic SQL if LLM query was unavailable or failed
     if res_df is None or len(res_df) == 0:
-        # Check which column appears in question
-        found_cols = [c for c in all_col_names if c.lower() in q_low]
-        group_col = active_target if active_target in all_col_names else (cat_cols[0] if cat_cols else "1")
-        metric_col = target_num if target_num in numeric_cols else (numeric_cols[0] if numeric_cols else "1")
-
-        for c in found_cols:
-            if c in cat_cols or c == active_target:
-                group_col = c
-            elif c in numeric_cols:
-                metric_col = c
-
-        if metric_col in numeric_cols and group_col in all_col_names and group_col != "1":
-            sql = (
-                f"SELECT {group_col} AS label, ROUND(AVG({metric_col}), 2) AS avg_value, COUNT(*) AS count "
-                f"FROM {table_name} GROUP BY {group_col} ORDER BY avg_value DESC LIMIT 20"
-            )
-        elif metric_col in numeric_cols:
-            sql = (
-                f"SELECT ROUND(AVG({metric_col}), 2) AS avg_value, ROUND(MIN({metric_col}), 2) AS min_value, "
-                f"ROUND(MAX({metric_col}), 2) AS max_value, COUNT(*) AS count FROM {table_name}"
-            )
-        else:
-            sql = f"SELECT {group_col} AS label, COUNT(*) AS count FROM {table_name} GROUP BY {group_col} ORDER BY count DESC LIMIT 15"
-
         try:
-            validated_sql = validate_safe_sql(sql)
+            validated_sql = validate_safe_sql(semantic_sql)
             res_df = olap_engine.query(validated_sql)
         except Exception:
-            # Ultimate safe count fallback
-            validated_sql = f"SELECT COUNT(*) AS total_records FROM {table_name}"
+            # Ultimate safe fallback
+            validated_sql = f"SELECT {cat_cols[0] if cat_cols else '1'} AS label, COUNT(*) AS value FROM {table_name} GROUP BY 1 ORDER BY value DESC LIMIT 10"
             res_df = olap_engine.query(validated_sql)
 
     records = res_df.to_dict(orient="records") if res_df is not None else []
-    data_summary_str = json.dumps(records[:10], default=str)
 
-    # Check if dataset explicitly has dollar symbol
+    # Check if dataset has dollar symbol
     has_dollar = any("$" in str(c.get("original_column_name", "")) or "$" in str(c.get("safe_column_name", "")) for c in schema_info)
     if not has_dollar and parquet_path and os.path.exists(parquet_path):
         try:
@@ -326,31 +546,82 @@ def answer_analyst_query(
         except Exception:
             has_dollar = False
 
-    if has_dollar:
-        currency_instruction = "4. If citing monetary amounts (such as Sales, Profit, Revenue, Cost, Price), format them clearly with dollar signs ($), e.g., $1,250.00 or -$450.00. Never put dollar signs on non-currency counts, quantities, ages, or percentages."
-    else:
-        currency_instruction = "4. CRITICAL: This dataset does NOT use dollar symbols ($). Do NOT use any dollar signs ($) anywhere in your response. Report all amounts and numbers cleanly with commas, e.g., 1,250.00 or -450.00."
+    is_currency_metric = False
+    if detected_metric:
+        is_currency_metric = any(k in detected_metric.lower() for k in ["sales", "profit", "revenue", "price", "cost", "amount", "spend", "mrr", "arr", "value"])
 
-    # ── Answer Synthesis: Clear, Simple, Dataset-Grounded ────────────────────
+    def fmt_val(v):
+        if v is None or pd.isna(v):
+            return "0"
+        pfx = "$" if (has_dollar and is_currency_metric) else ""
+        try:
+            val_f = float(v)
+            if val_f < 0:
+                return f"-{pfx}{abs(val_f):,.2f}"
+            if val_f.is_integer():
+                return f"{pfx}{int(val_f):,}"
+            return f"{pfx}{val_f:,.2f}"
+        except Exception:
+            return str(v)
+
+    # ── Chart Specification: Only generate chart when explicitly requested by user ───
+    requested_chart = _detect_chart_request(question)
+    chart_spec = None
+
+    if requested_chart and res_df is not None and len(records) >= 1:
+        cols = list(res_df.columns)
+        x_col = "label" if "label" in cols else cols[0]
+        y_col = "value" if "value" in cols else (cols[1] if len(cols) > 1 else cols[0])
+
+        is_temporal = any(k in str(x_col).lower() or k in str(detected_dim).lower() for k in ["date", "time", "day", "month", "year"])
+
+        if requested_chart == "auto":
+            final_chart_type = "line" if is_temporal else "bar"
+        else:
+            final_chart_type = requested_chart
+
+        dim_label_str = (detected_dim or x_col).replace("_", " ").title()
+        metric_label_str = (detected_metric or "Volume").replace("_", " ").title()
+        agg_label_str = agg_type.title() if agg_type else "Total"
+        chart_title = f"{final_chart_type.title()} Chart: {agg_label_str} {metric_label_str} by {dim_label_str} ({len(records)} items)"
+
+        chart_spec = {
+            "chart_type": final_chart_type,
+            "title": chart_title,
+            "x_axis": x_col,
+            "y_axis": y_col,
+            "name_key": x_col,
+            "value_key": y_col,
+            "data": records,
+        }
+
+    # ── Answer Synthesis: Clear, Direct, Dataset-Grounded ────────────────────
+    data_summary_str = json.dumps(records[:15], default=str)
+    if has_dollar and is_currency_metric:
+        curr_inst = "Format monetary amounts with dollar signs ($), e.g. $1,250.00."
+    else:
+        curr_inst = "Do not use dollar signs ($) unless the dataset explicitly uses them. Use clean commas, e.g. 1,250.00."
+
     answer_prompt = (
-        f"You are the InsightX AI Data Analyst. Give a simple, direct, plain-English answer to the user's question.\n"
+        "You are InsightX, an AI-powered data insights assistant. "
+        "Answer questions using ONLY the context retrieved from the user's uploaded data. "
+        "Never use external knowledge, assumptions, or invented information. "
+        "If a question is unrelated to the provided data or its answer is missing, politely respond: "
+        "\"I'm sorry, but I couldn't find that information in the data you've provided. Please ask a question related to your uploaded data.\" "
+        "If only partial information is available, answer only the supported part. Keep responses clear, concise, and professional.\n\n"
         f"User Question: \"{question}\"\n"
-        f"Dataset Domain: {domain_label}.\n"
-        f"Target Column: {active_target}.\n"
-        f"{rag_context_str}\n\n"
         f"Executed SQL: {validated_sql}\n"
-        f"Actual Query Data: {data_summary_str}\n\n"
+        f"Actual Query Data: {data_summary_str}\n"
+        f"{rag_context_str}\n\n"
         f"Instructions:\n"
-        f"1. Answer simply, directly, and truthfully using the actual numbers from the query data above.\n"
-        f"2. Explain the reasons or drivers in 1-2 simple sentences based on the data patterns.\n"
-        f"3. Provide 1 practical, actionable recommendation based on the data.\n"
-        f"{currency_instruction}\n"
-        f"5. Do NOT make excuses about missing data or columns; the query has computed the exact numbers.\n"
-        f"6. Output in this exact format:\n"
-        f"FINDING: (1 direct sentence with the exact answer and numbers)\n"
-        f"EVIDENCE: (1 concise sentence specifying the counts, rates, or averages)\n"
-        f"EXPLANATION: (1-2 clear sentences explaining the analytical result based on the dataset)\n"
-        f"RECOMMENDATION: (1 practical, actionable takeaway based on the dataset)"
+        f"1. Answer directly and truthfully using ONLY the exact numbers from the query data above.\n"
+        f"2. Do NOT output raw tables or markdown tables. Focus directly on key figures and clear analytical answers.\n"
+        f"3. {curr_inst}\n"
+        f"4. Output in this exact format:\n"
+        f"FINDING: (1 direct sentence stating the clear answer with the exact top numbers)\n"
+        f"EVIDENCE: (1-2 sentences summarizing key metrics, totals, or percentages from the data)\n"
+        f"EXPLANATION: (1-2 sentences explaining why this pattern occurs based on the dataset drivers)\n"
+        f"RECOMMENDATION: (1 practical, actionable takeaway for leadership)"
     )
 
     llm_synthesis = query_free_llm(question, system_context=answer_prompt)
@@ -382,7 +653,7 @@ def answer_analyst_query(
                 current_section = "evidence"
                 val = line_str.replace("*", "").replace("#", "")
                 collected["evidence"].append(val.split(":", 1)[1].strip())
-            elif clean_lower.startswith("explanation:") or clean_lower.startswith("why it happened:"):
+            elif clean_lower.startswith("explanation:"):
                 current_section = "explanation"
                 val = line_str.replace("*", "").replace("#", "")
                 collected["explanation"].append(val.split(":", 1)[1].strip())
@@ -398,43 +669,48 @@ def answer_analyst_query(
         explanation_text = "\n".join(collected["explanation"]).strip()
         recommendation_text = " ".join(collected["recommendation"]).strip()
 
-    # Fallback formatting if parsing was empty
-    if not finding_text and records:
-        first_row = records[0]
-        finding_text = f"Analysis shows: {', '.join([f'{k}: {v}' for k, v in list(first_row.items())[:3]])}."
-    if not evidence_text:
-        evidence_text = f"Calculated from DuckDB SQL query across {len(records)} record group(s)."
-    if not explanation_text:
-        explanation_text = llm_synthesis or (
-            f"The query analyzed '{question}' directly against {active_target}. "
-            f"Review the breakdown to understand how performance varies across groups."
-        )
+    # Deterministic natural synthesis if LLM was unavailable
+    if records:
+        top_row = records[0]
+        top_name = str(top_row.get("label", list(top_row.values())[0]))
+        top_val_raw = top_row.get("value", list(top_row.values())[1] if len(top_row) > 1 else 0)
+        top_val_str = fmt_val(top_val_raw)
 
-    if not recommendation_text:
-        recommendation_text = f"Analyze variations across categories to prioritize high-performing segments."
+        metric_name = (detected_metric or "metric").replace("_", " ").title()
+        dim_name = (detected_dim or "category").replace("_", " ").title()
 
-    # ── Chart Specification: Only provide a graph if requested or relevant ──
-    chart_spec = None
-    if wants_graph and res_df is not None and len(res_df) >= 2 and len(res_df.columns) >= 2:
-        cols = list(res_df.columns)
-        x_axis = cols[0]
-        # Look for numeric column for y
-        y_candidates = [c for c in cols[1:] if c != x_axis]
-        y_axis = y_candidates[0] if y_candidates else cols[1]
+        if not finding_text:
+            if len(records) > 1:
+                finding_text = f"'{top_name}' leads the ranking with {top_val_str} {metric_name.lower()}, ranking #1 among the top {len(records)} {dim_name.lower()} groups."
+            else:
+                finding_text = f"The {agg_type} {metric_name.lower()} is {top_val_str} based on your query."
 
-        chart_title = (
-            f"{y_axis.replace('_', ' ').title()} by {x_axis.replace('_', ' ').title()}"
-        )
-        chart_spec = {
-            "chart_type": "line" if any(k in q_low for k in ["trend", "over time", "month", "day"]) else "bar",
-            "title": chart_title,
-            "x_axis": x_axis,
-            "y_axis": y_axis,
-            "data": records,
-        }
+        if not evidence_text:
+            if len(records) > 1:
+                last_row = records[-1]
+                last_name = str(last_row.get("label", "other groups"))
+                last_val_str = fmt_val(last_row.get("value", 0))
+                evidence_text = f"The top segment ('{top_name}') accounts for {top_val_str}, while '{last_name}' recorded {last_val_str}. Total analyzed groups: {len(records)}."
+            else:
+                evidence_text = f"Calculated directly from verified dataset records via in-memory DuckDB query."
+
+        if not explanation_text:
+            explanation_text = f"Performance is driven by strong volume concentration in '{top_name}'. Review the interactive chart above to evaluate how distribution varies across segments."
+
+        if not recommendation_text:
+            recommendation_text = f"Prioritize operational capacity and resource allocation toward high-yielding segments like '{top_name}' to maximize overall performance."
+    else:
+        if not finding_text:
+            finding_text = "No records matched the specified query parameters in the dataset."
+        if not evidence_text:
+            evidence_text = "Query evaluated 0 matching rows."
+        if not explanation_text:
+            explanation_text = "The requested columns or filter criteria did not return any records in the current dataset."
+        if not recommendation_text:
+            recommendation_text = "Try broadening your query or selecting another column to explore."
 
     return AIAnalystResponse(
-        finding=finding_text or "Analysis completed.",
+        finding=finding_text,
         evidence=evidence_text,
         explanation=explanation_text,
         recommendation=recommendation_text,

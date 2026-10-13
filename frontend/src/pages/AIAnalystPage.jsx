@@ -54,16 +54,16 @@ function AssistantCard({ msg, idx, showSql, toggleSql }) {
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed font-medium">
-          I am your AI Data Analyst. Ask me any analytical question about your dataset, and I will query the data, analyze patterns, and provide clear insights and recommendations based on your dataset records.
+          I am your AI Data Analyst. Ask me any analytical question based on your dataset (or ask for specific charts like bar, line, or pie), and I will provide grounded data insights.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 mr-4 md:mr-12">
+    <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 mr-4 md:mr-12 space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
           Analytical Finding
         </span>
@@ -82,48 +82,18 @@ function AssistantCard({ msg, idx, showSql, toggleSql }) {
         </div>
       </div>
 
-      <p className="text-base font-bold text-slate-100 mb-3">{msg.finding}</p>
+      <p className="text-base font-bold text-slate-100 leading-snug">{msg.finding}</p>
 
-      {/* Evidence (Actual Data) & Explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mb-3">
-        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-          <span className="font-bold text-slate-400 block mb-1">Evidence (Actual Data)</span>
-          <p className="text-slate-300 mb-2">{msg.evidence}</p>
-          {Array.isArray(msg.raw_data) && msg.raw_data.length > 0 && (
-            <div className="overflow-x-auto max-h-48 rounded border border-slate-800/80 mt-2">
-              <table className="w-full text-[11px] text-left">
-                <thead className="bg-slate-900 text-slate-400 font-semibold sticky top-0 border-b border-slate-800">
-                  <tr>
-                    {Object.keys(msg.raw_data[0]).map((col) => (
-                      <th key={col} className="px-2 py-1 whitespace-nowrap capitalize">
-                        {col.replace(/_/g, " ")}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {msg.raw_data.slice(0, 10).map((row, rIdx) => (
-                    <tr key={rIdx} className="hover:bg-slate-900/40">
-                      {Object.entries(row).map(([k, val], cIdx) => (
-                        <td key={cIdx} className="px-2 py-1 text-slate-300 font-mono whitespace-nowrap">
-                          {typeof val === "number"
-                            ? k.includes("$")
-                              ? (val < 0 ? `-$${Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-                              : val.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                            : String(val ?? "—")}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {msg.raw_data.length > 10 && (
-                <div className="text-[10px] text-slate-500 text-center py-1 bg-slate-900/60 border-t border-slate-800">
-                  Showing top 10 of {msg.raw_data.length} rows
-                </div>
-              )}
-            </div>
-          )}
+      {/* Row: Evidence & Explanation (Without Table) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
+          <div>
+            <span className="font-bold text-slate-400 block mb-1">Evidence (Key Metrics)</span>
+            <p className="text-slate-300 leading-relaxed font-medium">{msg.evidence}</p>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-900 text-[10px] text-slate-500">
+            Computed in real-time via in-memory DuckDB query.
+          </div>
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
@@ -131,31 +101,39 @@ function AssistantCard({ msg, idx, showSql, toggleSql }) {
             <span className="font-bold text-slate-400 block mb-1">Explanation</span>
             <p className="text-slate-300 whitespace-pre-line leading-relaxed font-medium">{msg.explanation}</p>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-900 text-[10px] text-slate-500 italic">
-            *Calculated directly from verified dataset records.
+          <div className="mt-2 pt-2 border-t border-slate-900 text-[10px] text-slate-500 italic">
+            *Ground-truth empirical attribution calculated from dataset records.
           </div>
         </div>
       </div>
 
+      {/* Generated Visual Chart (Always generated based on dataset) */}
+      {msg.chart_spec && msg.chart_spec.data && msg.chart_spec.data.length > 0 && (
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
+              {msg.chart_spec.title}
+            </h4>
+            <span className="text-[10px] text-slate-500 font-mono">
+              {msg.chart_spec.data.length} segments analyzed
+            </span>
+          </div>
+          <ChartRenderer spec={msg.chart_spec} />
+        </div>
+      )}
+
       {/* Recommendation */}
       {msg.recommendation && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs mb-3">
+        <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs">
           <span className="font-bold text-emerald-400 block mb-1">Recommendation</span>
           <p className="text-slate-300 leading-relaxed font-medium">{msg.recommendation}</p>
         </div>
       )}
 
-      {/* Generated Chart */}
-      {msg.chart_spec && msg.chart_spec.data && msg.chart_spec.data.length > 0 && (
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 mb-3">
-          <h4 className="text-xs font-bold text-slate-300 mb-2">{msg.chart_spec.title}</h4>
-          <ChartRenderer spec={msg.chart_spec} />
-        </div>
-      )}
-
       {/* SQL Inspector */}
       {msg.sql_query && (
-        <div>
+        <div className="pt-1">
           <button
             onClick={() => toggleSql(idx)}
             className="text-[11px] font-semibold text-slate-500 hover:text-indigo-400 flex items-center gap-1.5 transition"
@@ -228,9 +206,9 @@ export default function AIAnalystPage() {
       // Fallback tailored prompts using target_column if no RAG profile yet
       const targetName = currentDataset.target_column ? currentDataset.target_column.replace(/_/g, " ") : "the target metric";
       setSuggestedPrompts([
-        `What drives ${targetName} the most?`,
-        `Why does ${targetName} increase or decrease?`,
-        `What is the breakdown of ${targetName} across categories?`,
+        `Show top 10 records by ${targetName}.`,
+        `Give top 20 items with highest volume.`,
+        `What is the breakdown across categories?`,
         "Show a statistical summary of the dataset.",
         "Find unusual anomalies or outliers.",
       ]);
@@ -253,7 +231,7 @@ export default function AIAnalystPage() {
           evidence: "Dataset statistics, column distributions, and correlations have been profiled.",
           explanation:
             "The AI Analyst now has a richer understanding of your dataset. Answers will be more grounded and context-aware.",
-          recommendation: "Try asking about trends, comparisons, or root causes now.",
+          recommendation: "Try asking about top 10 rankings, comparisons, or root causes now.",
           confidence: "High",
           rag_chunks_used: 0,
         },
@@ -324,7 +302,7 @@ export default function AIAnalystPage() {
             <Bot className="w-6 h-6 text-indigo-400" /> Interactive AI Data Analyst
           </h1>
           <p className="text-sm text-slate-400">
-            RAG-powered analytics · AST-validated SQL · Domain-aware LLM insights
+            RAG-powered analytics · AST-validated SQL · Visual Chart Generation
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -480,7 +458,7 @@ export default function AIAnalystPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-          placeholder="Ask anything about the dataset, trends, or root causes..."
+          placeholder="Ask anything based on the datasets..."
           className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none"
         />
         <button

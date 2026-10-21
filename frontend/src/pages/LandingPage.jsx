@@ -155,16 +155,16 @@ export default function LandingPage() {
         {/* Active Dataset Quick Resume Banner */}
         {currentDataset && (
           <div className="flex items-center justify-center">
-            <div className="glass-card inline-flex items-center gap-3 px-4 py-2 rounded-2xl border border-indigo-500/30 text-xs shadow-xl">
-              <span className="text-slate-300 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                Active Dataset: <strong className="text-indigo-200">{currentDataset.name}</strong>
+            <div className="glass-card inline-flex items-center gap-3 px-4 py-2 rounded-2xl border border-[#00F2FE]/30 text-xs shadow-xl">
+              <span className="text-[#A5B4FC] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00F2FE] animate-pulse"></span>
+                Active Dataset: <strong className="text-white font-semibold">{currentDataset.name}</strong>
               </span>
               <Link
                 to="/dashboard"
-                className="px-3 py-1.5 rounded-xl glass-btn-primary text-white font-bold text-xs flex items-center gap-1"
+                className="px-3.5 py-1.5 rounded-xl glass-btn-primary text-[#070B19] font-extrabold text-xs flex items-center gap-1 shadow-md shadow-[#00F2FE]/30 hover:shadow-[#00F2FE]/60"
               >
-                Go to Dashboard <ArrowRight className="w-3 h-3" />
+                Go to Dashboard <ArrowRight className="w-3 h-3 text-[#070B19]" />
               </Link>
             </div>
           </div>
@@ -172,57 +172,57 @@ export default function LandingPage() {
 
         {/* Interactive Scenario Launchers */}
         <div className="space-y-3">
-          <div className="flex items-center justify-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            <Play className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
+          <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#A5B4FC]/80">
+            <Play className="w-3.5 h-3.5 text-[#00F2FE] fill-[#00F2FE]" />
             Instant Interactive Demo Scenarios
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => handleStartDemo("ecommerce")}
               disabled={loading}
-              className="p-4 rounded-2xl glass-card text-left group hover:border-indigo-500/50"
+              className="p-4 rounded-2xl glass-card text-left group hover:border-[#00F2FE]/60 hover:shadow-lg hover:shadow-[#00F2FE]/15 transition-all"
             >
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2.5">
-                <ShoppingCart className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-xl bg-[#00F2FE]/15 text-[#00F2FE] border border-[#00F2FE]/30 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+                <ShoppingCart className="w-4 h-4 text-[#00F2FE]" />
               </div>
-              <h4 className="text-sm font-bold text-slate-100 group-hover:text-indigo-300 transition">E-Commerce Intelligence</h4>
-              <p className="text-[11px] text-slate-400 mt-1">4,582 orders with South shipping bottleneck.</p>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#00F2FE] transition">E-Commerce Intelligence</h4>
+              <p className="text-[11px] text-[#A5B4FC] mt-1 leading-relaxed">4,582 orders with South shipping bottleneck.</p>
             </button>
 
             <button
               onClick={() => handleStartDemo("healthcare")}
               disabled={loading}
-              className="p-4 rounded-2xl glass-card text-left group hover:border-rose-500/50"
+              className="p-4 rounded-2xl glass-card text-left group hover:border-[#9B51E0]/60 hover:shadow-lg hover:shadow-[#9B51E0]/15 transition-all"
             >
-              <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2.5">
-                <HeartPulse className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-xl bg-[#9B51E0]/15 text-[#9B51E0] border border-[#9B51E0]/30 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+                <HeartPulse className="w-4 h-4 text-[#9B51E0]" />
               </div>
-              <h4 className="text-sm font-bold text-slate-100 group-hover:text-rose-300 transition">Heart Clinical Discovery</h4>
-              <p className="text-[11px] text-slate-400 mt-1">Disease attribution and triage optimization.</p>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#9B51E0] transition">Heart Clinical Discovery</h4>
+              <p className="text-[11px] text-[#A5B4FC] mt-1 leading-relaxed">Disease attribution and triage optimization.</p>
             </button>
 
             <button
               onClick={() => handleStartDemo("saas")}
               disabled={loading}
-              className="p-4 rounded-2xl glass-card text-left group hover:border-emerald-500/50"
+              className="p-4 rounded-2xl glass-card text-left group hover:border-[#00F2FE]/60 hover:shadow-lg hover:shadow-[#00F2FE]/15 transition-all"
             >
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2.5">
-                <Rocket className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-xl bg-[#00F2FE]/15 text-[#00F2FE] border border-[#00F2FE]/30 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+                <Rocket className="w-4 h-4 text-[#00F2FE]" />
               </div>
-              <h4 className="text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition">SaaS Funnel Analytics</h4>
-              <p className="text-[11px] text-slate-400 mt-1">Acquisition drop-off & retention drivers.</p>
+              <h4 className="text-sm font-bold text-white group-hover:text-[#00F2FE] transition">SaaS Funnel Analytics</h4>
+              <p className="text-[11px] text-[#A5B4FC] mt-1 leading-relaxed">Acquisition drop-off & retention drivers.</p>
             </button>
 
             <Link
               to="/upload"
-              className="p-4 rounded-2xl glass-card text-left group hover:border-purple-500/50 flex flex-col justify-between"
+              className="p-4 rounded-2xl glass-card text-left group hover:border-[#9B51E0]/60 hover:shadow-lg hover:shadow-[#9B51E0]/15 transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2.5">
-                  <UploadCloud className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-[#9B51E0]/15 text-[#9B51E0] border border-[#9B51E0]/30 flex items-center justify-center mb-2.5 group-hover:scale-110 transition">
+                  <UploadCloud className="w-4 h-4 text-[#9B51E0]" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-100 group-hover:text-purple-300 transition">Upload Custom File</h4>
-                <p className="text-[11px] text-slate-400 mt-1">Drop CSV or multi-sheet Excel directly.</p>
+                <h4 className="text-sm font-bold text-white group-hover:text-[#9B51E0] transition">Upload Custom File</h4>
+                <p className="text-[11px] text-[#A5B4FC] mt-1 leading-relaxed">Drop CSV or multi-sheet Excel directly.</p>
               </div>
             </Link>
           </div>
@@ -231,10 +231,10 @@ export default function LandingPage() {
         {/* Interactive Platform Flow Section */}
         <div className="glass-panel rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
-            <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4" /> End-to-End Enterprise Data Flow
+            <h3 className="text-xs font-bold text-[#00F2FE] uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#00F2FE]" /> End-to-End Enterprise Data Flow
             </h3>
-            <span className="text-[11px] text-slate-400">Click any step to inspect technical pipeline</span>
+            <span className="text-[11px] text-[#A5B4FC]/70">Click any step to inspect technical pipeline</span>
           </div>
 
           {/* 4 Interactive Flow Cards */}
@@ -247,16 +247,16 @@ export default function LandingPage() {
                   onClick={() => setActiveStep(step.id)}
                   className={`p-4 rounded-2xl text-left transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? `glass-panel border-2 ${step.borderColor} shadow-lg ring-1 ring-white/15 scale-[1.02]`
-                      : "glass-card opacity-75 hover:opacity-100"
+                      ? `glass-panel border-2 border-[#00F2FE] shadow-lg shadow-[#00F2FE]/20 ring-1 ring-[#00F2FE]/30 scale-[1.02]`
+                      : "glass-card opacity-80 hover:opacity-100 hover:border-white/20"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className={`text-[10px] font-extrabold ${step.color}`}>{step.step}</span>
-                    {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>}
+                    <span className={`text-[10px] font-extrabold ${isSelected ? "text-[#00F2FE]" : "text-[#A5B4FC]"}`}>{step.step}</span>
+                    {isSelected && <span className="w-2 h-2 rounded-full bg-[#00F2FE] animate-pulse"></span>}
                   </div>
-                  <h4 className="text-xs font-bold text-slate-100 mb-1">{step.title}</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">{step.desc}</p>
+                  <h4 className="text-xs font-bold text-white mb-1">{step.title}</h4>
+                  <p className="text-[11px] text-[#A5B4FC] leading-snug">{step.desc}</p>
                 </button>
               );
             })}
@@ -266,23 +266,23 @@ export default function LandingPage() {
           <div className="p-4 sm:p-5 rounded-2xl glass-card border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${flowSteps[activeStep].badgeColor}`}>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-[#9B51E0]/15 text-[#9B51E0] border-[#9B51E0]/40">
                   {flowSteps[activeStep].preview.badge}
                 </span>
-                <h4 className="text-sm font-bold text-slate-100">
+                <h4 className="text-sm font-bold text-white">
                   {flowSteps[activeStep].preview.title}
                 </h4>
               </div>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl">
+              <p className="text-xs sm:text-sm text-[#A5B4FC] leading-relaxed max-w-3xl">
                 {flowSteps[activeStep].preview.instruction}
               </p>
             </div>
             <Link
               to={flowSteps[activeStep].preview.actionLink}
-              className="px-4 py-2 rounded-xl glass-btn text-white text-xs font-bold flex items-center gap-1.5 flex-shrink-0 self-start md:self-center hover:scale-105 transition"
+              className="px-4 py-2 rounded-xl glass-btn-primary text-[#070B19] text-xs font-bold flex items-center gap-1.5 flex-shrink-0 self-start md:self-center shadow-md shadow-[#00F2FE]/30 hover:scale-105 transition"
             >
               <span>{flowSteps[activeStep].preview.actionLabel}</span>
-              <ArrowRight className="w-3.5 h-3.5 text-indigo-400" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#070B19]" />
             </Link>
           </div>
         </div>

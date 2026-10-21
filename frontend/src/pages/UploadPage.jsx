@@ -140,7 +140,7 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">Dataset Ingestion Hub</h1>
         <p className="text-sm text-slate-400">

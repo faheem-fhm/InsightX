@@ -11,10 +11,11 @@ import {
   SearchCode, 
   Bot, 
   FileText,
-  DatabaseZap
+  DatabaseZap,
+  X
 } from "lucide-react";
 
-export default function Sidebar() {
+export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
   const navItems = [
     { section: "DATA PLATFORM" },
     { to: "/dashboard", label: "Executive Dashboard", icon: LayoutDashboard },
@@ -29,23 +30,41 @@ export default function Sidebar() {
     { section: "BUSINESS INTELLIGENCE" },
     { to: "/customers", label: "Customer Intelligence", icon: Users },
     { to: "/root-cause", label: "Root Cause Studio", icon: SearchCode },
-    { to: "/ai-analyst", label: "AI Data Analyst", icon: Bot, badge: "AI" },
+    { to: "/ai-analyst", label: "Data Analyst Studio", icon: Bot },
     { to: "/reports", label: "Executive Reports", icon: FileText },
   ];
 
-  return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen sticky top-0 select-none z-30 print:hidden print-hide">
+  const handleNavClick = () => {
+    if (setMobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const navContent = (
+    <div className="flex flex-col h-full select-none">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-800">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-black">
-          <DatabaseZap className="w-5 h-5" />
+      <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 text-white font-black">
+            <DatabaseZap className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+              Insight<span className="text-indigo-400">X</span>
+            </span>
+            <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Enterprise Analytics</p>
+          </div>
         </div>
-        <div>
-          <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-            Insight<span className="text-indigo-400">X</span>
-          </span>
-          <p className="text-[10px] text-slate-400 font-medium tracking-wide">ENTERPRISE ANALYTICS</p>
-        </div>
+        {/* Mobile Close Button */}
+        {setMobileMenuOpen && (
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation List */}
@@ -53,7 +72,7 @@ export default function Sidebar() {
         {navItems.map((item, idx) => {
           if (item.section) {
             return (
-              <div key={idx} className="px-3 pt-4 pb-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              <div key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                 {item.section}
               </div>
             );
@@ -63,11 +82,12 @@ export default function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={handleNavClick}
               className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-indigo-600/15 text-indigo-400 border border-indigo-500/30 shadow-sm"
-                    : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm backdrop-blur-md font-semibold"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent"
                 }`
               }
             >
@@ -75,23 +95,44 @@ export default function Sidebar() {
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 <span>{item.label}</span>
               </div>
-              {item.badge && (
-                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  {item.badge}
-                </span>
-              )}
             </NavLink>
           );
         })}
       </div>
 
       {/* Footer System Status */}
-      <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+      <div className="p-4 border-t border-white/10 bg-black/20 flex-shrink-0">
         <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>OLAP Engine: DuckDB Active</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50"></span>
+          <span className="font-mono text-[11px]">OLAP Engine: DuckDB Active</span>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Static Glass Sidebar */}
+      <aside className="hidden md:flex w-64 glass-panel border-r border-white/10 flex-col h-screen sticky top-0 z-30 print:hidden flex-shrink-0">
+        {navContent}
+      </aside>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 md:hidden animate-in fade-in duration-200"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Slide-over Glass Drawer */}
+      <aside 
+        className={`fixed inset-y-0 left-0 w-72 glass-panel border-r border-white/15 z-50 md:hidden shadow-2xl transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {navContent}
+      </aside>
+    </>
   );
 }

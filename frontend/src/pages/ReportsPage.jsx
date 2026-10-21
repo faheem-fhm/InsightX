@@ -256,7 +256,7 @@ export default function ReportsPage() {
         }
       `}</style>
 
-      <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-8 print-full-width">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-8 print-full-width">
         {/* Header & Single Action: Download PDF Report */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
           <div>

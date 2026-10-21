@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { DatasetProvider } from "./context/DatasetContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -19,12 +19,14 @@ import AIAnalystPage from "./pages/AIAnalystPage";
 import ReportsPage from "./pages/ReportsPage";
 
 function AppLayout() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Header />
-        <main className="flex-1 pb-16">
+    <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      <Sidebar mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto w-full">
+        <Header mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+        <main className="flex-1 pb-16 w-full">
           <Outlet />
         </main>
       </div>

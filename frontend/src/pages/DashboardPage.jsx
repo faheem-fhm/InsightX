@@ -150,7 +150,7 @@ export default function DashboardPage() {
   const filtersApplied = Object.keys(selectedFilters).length > 0;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto space-y-8">
       {/* Title & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -200,7 +200,7 @@ export default function DashboardPage() {
             to="/ai-analyst"
             className="px-3.5 py-2 rounded-lg bg-indigo-600/15 text-indigo-400 border border-indigo-500/30 text-xs font-bold hover:bg-indigo-600/25 transition flex items-center gap-2"
           >
-            <Sparkles className="w-3.5 h-3.5" /> Ask AI Analyst
+            <Sparkles className="w-3.5 h-3.5" /> Analyst Studio
           </Link>
           <Link
             to="/root-cause"

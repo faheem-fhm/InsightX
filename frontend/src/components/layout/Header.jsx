@@ -1,25 +1,46 @@
 import React from "react";
 import { useDataset } from "../../context/DatasetContext";
 import { useTheme } from "../../context/ThemeContext";
-import { Database, Sun, Moon, Sparkles } from "lucide-react";
+import { Database, Sun, Moon, Menu, X, DatabaseZap } from "lucide-react";
 
-export default function Header() {
+export default function Header({ mobileMenuOpen, setMobileMenuOpen }) {
   const { datasets, currentDataset, selectDataset, loadSampleDataset, loading } = useDataset();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 flex items-center justify-between px-8 sticky top-0 z-20 print:hidden print-hide">
-      <div className="flex items-center gap-4">
+    <header className="h-16 glass-panel border-b border-white/10 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-20 print:hidden flex-shrink-0">
+      <div className="flex items-center gap-3">
+        {/* Mobile Hamburger Button */}
+        {setMobileMenuOpen && (
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-xl glass-btn text-slate-300 hover:text-white"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        )}
+
+        {/* Mobile Brand Logo */}
+        <div className="flex md:hidden items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold">
+            <DatabaseZap className="w-4 h-4" />
+          </div>
+          <span className="font-extrabold text-sm tracking-tight text-white">
+            Insight<span className="text-indigo-400">X</span>
+          </span>
+        </div>
+
         {/* Active Dataset Selector */}
-        <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1.5">
-          <Database className="w-4 h-4 text-indigo-400" />
+        <div className="flex items-center gap-2 glass-input rounded-xl px-3 py-1.5 max-w-[200px] sm:max-w-xs md:max-w-sm">
+          <Database className="w-4 h-4 text-indigo-400 flex-shrink-0" />
           <select
             value={currentDataset?.id || ""}
             onChange={(e) => {
               const selected = datasets.find(d => d.id === e.target.value);
               if (selected) selectDataset(selected);
             }}
-            className="bg-transparent text-sm font-medium text-slate-200 outline-none cursor-pointer pr-2"
+            className="bg-transparent text-xs sm:text-sm font-medium text-slate-200 outline-none cursor-pointer pr-1 w-full truncate"
           >
             {datasets.map(d => (
               <option key={d.id} value={d.id} className="bg-slate-900 text-slate-200">
@@ -32,37 +53,37 @@ export default function Header() {
           </select>
         </div>
 
-        {/* Quality pill badge */}
+        {/* Quality score pill */}
         {currentDataset?.quality_score && (
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-sm backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             Data Quality: {currentDataset.quality_score}/100
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Quick Sample Loaders */}
-        <div className="hidden lg:flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Load Demo:</span>
+        <div className="hidden xl:flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-medium">Demo:</span>
           <button
             onClick={() => loadSampleDataset("ecommerce")}
             disabled={loading}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+            className="px-2.5 py-1 text-xs font-medium rounded-lg glass-btn text-slate-300 hover:text-white"
           >
             E-Commerce
           </button>
           <button
             onClick={() => loadSampleDataset("saas")}
             disabled={loading}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+            className="px-2.5 py-1 text-xs font-medium rounded-lg glass-btn text-slate-300 hover:text-white"
           >
             SaaS Funnel
           </button>
           <button
             onClick={() => loadSampleDataset("healthcare")}
             disabled={loading}
-            className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+            className="px-2.5 py-1 text-xs font-medium rounded-lg glass-btn text-slate-300 hover:text-white"
           >
             Healthcare
           </button>
@@ -71,10 +92,10 @@ export default function Header() {
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition"
+          className="w-9 h-9 flex items-center justify-center rounded-xl glass-btn text-slate-300 hover:text-white"
           title="Toggle light/dark mode"
         >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-slate-800" />}
+          {theme === "dark" ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-slate-700" />}
         </button>
       </div>
     </header>

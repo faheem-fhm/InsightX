@@ -294,15 +294,15 @@ export default function AIAnalystPage() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto space-y-5">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
-            <Bot className="w-6 h-6 text-indigo-400" /> Interactive AI Data Analyst
+            <Bot className="w-6 h-6 text-indigo-400" /> Data Analyst Studio
           </h1>
-          <p className="text-sm text-slate-400">
-            RAG-powered analytics · AST-validated SQL · Visual Chart Generation
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+            In-Memory DuckDB Engine · Deterministic SQL · Verified Empirical Analytics
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -440,9 +440,9 @@ export default function AIAnalystPage() {
 
         {/* Typing indicator */}
         {asking && (
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 mr-4 md:mr-12">
+          <div className="p-4 rounded-2xl glass-panel border border-white/10 mr-4 md:mr-12">
             <div className="flex items-center gap-2 text-xs text-indigo-400 mb-2">
-              <Bot className="w-3.5 h-3.5" /> Analysing dataset with RAG context...
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Evaluating query against dataset records...
             </div>
             <TypingIndicator />
           </div>
@@ -452,7 +452,7 @@ export default function AIAnalystPage() {
       </div>
 
       {/* ── Sticky Input ─────────────────────────────────────────────────── */}
-      <div className="sticky bottom-4 bg-slate-900 border border-slate-700 rounded-xl p-2 flex items-center gap-2 shadow-2xl">
+      <div className="sticky bottom-4 glass-panel border border-white/10 rounded-2xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xl">
         <input
           type="text"
           value={query}
@@ -464,10 +464,10 @@ export default function AIAnalystPage() {
         <button
           onClick={() => handleAsk()}
           disabled={asking || !query.trim()}
-          className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+          className="px-4 py-2.5 rounded-xl glass-btn-primary font-bold text-xs flex items-center gap-1.5 disabled:opacity-50 flex-shrink-0 cursor-pointer"
         >
           {asking ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          {asking ? "Thinking..." : "Send"}
+          {asking ? "Evaluating..." : "Send"}
         </button>
       </div>
     </div>

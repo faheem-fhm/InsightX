@@ -23,17 +23,18 @@ export default function Header({ mobileMenuOpen, setMobileMenuOpen }) {
 
         {/* Mobile Brand Logo */}
         <div className="flex md:hidden items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold">
-            <DatabaseZap className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#00F2FE] via-[#6366F1] to-[#9B51E0] flex items-center justify-center text-[#070B19] font-bold">
+            <DatabaseZap className="w-4 h-4 text-[#070B19]" />
           </div>
-          <span className="font-extrabold text-sm tracking-tight text-white">
-            Insight<span className="text-indigo-400">X</span>
+          <span className="font-extrabold text-sm tracking-tight">
+            <span className="text-[#00F2FE]">Insight</span>
+            <span className="text-[#9B51E0]">X</span>
           </span>
         </div>
 
         {/* Active Dataset Selector */}
         <div className="flex items-center gap-2 glass-input rounded-xl px-3 py-1.5 max-w-[200px] sm:max-w-xs md:max-w-sm">
-          <Database className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+          <Database className="w-4 h-4 text-[#00F2FE] flex-shrink-0" />
           <select
             value={currentDataset?.id || ""}
             onChange={(e) => {

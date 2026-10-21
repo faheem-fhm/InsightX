@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 
-const PALETTE = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#3b82f6", "#8b5cf6", "#14b8a6"];
+const PALETTE = ["#00F2FE", "#9B51E0", "#10b981", "#f59e0b", "#ec4899", "#38bdf8", "#8b5cf6"];
 
 export default function ChartRenderer({ spec }) {
   if (!spec || !spec.data || spec.data.length === 0) {
@@ -20,10 +20,10 @@ export default function ChartRenderer({ spec }) {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-800 border border-slate-700 p-2.5 rounded-lg shadow-xl text-xs">
-          <p className="font-semibold text-slate-200 mb-1">{label || payload[0]?.payload[x_axis] || payload[0]?.name}</p>
+        <div className="bg-[#121829]/95 border border-white/10 p-2.5 rounded-xl shadow-2xl text-xs backdrop-blur-md">
+          <p className="font-bold text-white mb-1">{label || payload[0]?.payload[x_axis] || payload[0]?.name}</p>
           {payload.map((item, idx) => (
-            <p key={idx} className="text-indigo-400 font-medium">
+            <p key={idx} className="text-[#00F2FE] font-semibold">
               {item.name || "Value"}: {typeof item.value === "number" ? item.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : item.value}
             </p>
           ))}
@@ -38,19 +38,19 @@ export default function ChartRenderer({ spec }) {
       <ResponsiveContainer width="100%" height="100%">
         {chart_type === "line" ? (
           <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#121829" />
             <XAxis dataKey={x_axis || "date"} stroke="#64748b" tick={{ fontSize: 11 }} />
             <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
             <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey={y_axis || "value"} stroke="#6366f1" strokeWidth={2.5} dot={{ r: 2, fill: "#6366f1" }} activeDot={{ r: 5 }} />
+            <Line type="monotone" dataKey={y_axis || "value"} stroke="#00F2FE" strokeWidth={2.5} dot={{ r: 2, fill: "#00F2FE" }} activeDot={{ r: 5 }} />
           </LineChart>
         ) : chart_type === "bar" ? (
           <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#121829" />
             <XAxis dataKey={x_axis || "category"} stroke="#64748b" tick={{ fontSize: 11 }} />
             <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey={y_axis || "value"} fill="#6366f1" radius={[4, 4, 0, 0]}>
+            <Bar dataKey={y_axis || "value"} fill="#00F2FE" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
               ))}
@@ -77,11 +77,11 @@ export default function ChartRenderer({ spec }) {
           </PieChart>
         ) : (
           <ScatterChart margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#121829" />
             <XAxis dataKey={x_axis || "x"} stroke="#64748b" tick={{ fontSize: 11 }} />
             <YAxis dataKey={y_axis || "y"} stroke="#64748b" tick={{ fontSize: 11 }} />
             <Tooltip content={<CustomTooltip />} />
-            <Scatter name="Points" data={data} fill="#8b5cf6" />
+            <Scatter name="Points" data={data} fill="#9B51E0" />
           </ScatterChart>
         )}
       </ResponsiveContainer>

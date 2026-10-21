@@ -45,21 +45,22 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 text-white font-black">
-            <DatabaseZap className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#00F2FE] via-[#6366F1] to-[#9B51E0] flex items-center justify-center shadow-lg shadow-[#00F2FE]/20 text-[#070B19] font-black">
+            <DatabaseZap className="w-5 h-5 text-[#070B19]" />
           </div>
           <div>
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-              Insight<span className="text-indigo-400">X</span>
+            <span className="font-extrabold text-lg tracking-tight">
+              <span className="text-[#00F2FE]">Insight</span>
+              <span className="text-[#9B51E0]">X</span>
             </span>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Enterprise Analytics</p>
+            <p className="text-[10px] text-[#A5B4FC]/70 font-medium tracking-wider uppercase">Enterprise Analytics</p>
           </div>
         </div>
         {/* Mobile Close Button */}
         {setMobileMenuOpen && (
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+            className="md:hidden p-1.5 rounded-lg text-[#A5B4FC] hover:text-white hover:bg-white/10 transition"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />
@@ -72,7 +73,7 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
         {navItems.map((item, idx) => {
           if (item.section) {
             return (
-              <div key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+              <div key={idx} className="px-3 pt-4 pb-1 text-[10px] font-bold tracking-wider text-[#A5B4FC]/60 uppercase">
                 {item.section}
               </div>
             );
@@ -86,8 +87,8 @@ export default function Sidebar({ mobileMenuOpen, setMobileMenuOpen }) {
               className={({ isActive }) =>
                 `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm backdrop-blur-md font-semibold"
-                    : "text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent"
+                    ? "bg-[#00F2FE]/15 text-[#00F2FE] border border-[#00F2FE]/30 shadow-sm backdrop-blur-md font-semibold"
+                    : "text-[#A5B4FC] hover:text-white hover:bg-white/[0.06] border border-transparent"
                 }`
               }
             >

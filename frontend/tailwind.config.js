@@ -8,20 +8,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          900: '#0c4a6e',
+        // The Modern Enterprise Tech Look (Dark Theme)
+        navy: {
+          deep: '#070B19',
+          cadet: '#121829',
+        },
+        cyan: {
+          electric: '#00F2FE',
+        },
+        purple: {
+          neon: '#9B51E0',
+        },
+        ice: {
+          blue: '#A5B4FC',
         },
         brand: {
-          dark: '#0b0f19',
-          card: '#111827',
-          cardBorder: '#1f2937',
-          accent: '#6366f1',
-          hover: '#4f46e5'
+          bg: '#070B19',
+          card: '#121829',
+          cyan: '#00F2FE',
+          purple: '#9B51E0',
+          ice: '#A5B4FC',
         }
       }
     },

@@ -826,7 +826,8 @@ def download_sample_file(filename: str):
     file_path = os.path.join(settings.SAMPLES_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File does not exist on disk.")
-    return FileResponse(path=file_path, filename=filename, media_type="application/octet-stream")
+    media_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if filename.endswith('.xlsx') else 'text/csv'
+    return FileResponse(path=file_path, filename=filename, media_type=media_type, headers={'Content-Disposition': f'attachment; filename="{filename}"', 'Access-Control-Expose-Headers': 'Content-Disposition'})
 
 
 # ── RAG: Get dataset-specific suggested prompts ──────────────────────────────

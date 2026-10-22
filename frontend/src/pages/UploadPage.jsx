@@ -26,6 +26,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [downloadingFile, setDownloadingFile] = useState(null);
   const { datasets, currentDataset, fetchDatasets, selectDataset, loadSampleDataset, deleteDataset, loading } = useDataset();
   const navigate = useNavigate();
 
@@ -135,8 +136,58 @@ export default function UploadPage() {
     }
   ];
 
-  const handleDownloadSample = (fileName) => {
-    window.open(`/api/v1/datasets/sample/download/${fileName}`, "_blank");
+  const handleDownloadSample = async (fileName) => {
+    setDownloadingFile(fileName);
+    try {
+      let blob = null;
+
+      // Strategy 1: Fetch via API endpoint
+      try {
+        const response = await fetch(`/api/v1/datasets/sample/download/${fileName}`);
+        if (response.ok) {
+          blob = await response.blob();
+        }
+      } catch (err) {
+        console.warn("API sample fetch failed, trying static public fallback:", err);
+      }
+
+      // Strategy 2: Fetch via static public asset /samples/...
+      if (!blob) {
+        try {
+          const response = await fetch(`/samples/${fileName}`);
+          if (response.ok) {
+            blob = await response.blob();
+          }
+        } catch (err) {
+          console.warn("Public samples fetch failed:", err);
+        }
+      }
+
+      // Strategy 3: Trigger instant automatic browser download via blob
+      if (blob) {
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+      } else {
+        // Strategy 4: Programmatic click on anchor with download attribute
+        const link = document.createElement("a");
+        link.href = `/api/v1/datasets/sample/download/${fileName}`;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Download failed:", err);
+      window.location.href = `/api/v1/datasets/sample/download/${fileName}`;
+    } finally {
+      setTimeout(() => setDownloadingFile(null), 1200);
+    }
   };
 
   return (
@@ -333,19 +384,21 @@ export default function UploadPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleDownloadSample(sample.xlsxFile)}
-                    className="py-1.5 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
-                    title="Download raw Excel file with multiple sheets"
+                    disabled={downloadingFile === sample.xlsxFile}
+                    className="py-1.5 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold transition flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-60"
+                    title={`Click to automatically download ${sample.xlsxFile}`}
                   >
-                    <FileSpreadsheet className="w-3 h-3" />
-                    Excel (.xlsx)
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>{downloadingFile === sample.xlsxFile ? "Downloading..." : "Excel (.xlsx)"}</span>
                   </button>
                   <button
                     onClick={() => handleDownloadSample(sample.csvFile)}
-                    className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] font-semibold transition flex items-center justify-center gap-1.5"
-                    title="Download raw CSV file"
+                    disabled={downloadingFile === sample.csvFile}
+                    className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white text-[11px] font-semibold transition flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-60"
+                    title={`Click to automatically download ${sample.csvFile}`}
                   >
-                    <FileText className="w-3 h-3" />
-                    CSV File
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>{downloadingFile === sample.csvFile ? "Downloading..." : "CSV File"}</span>
                   </button>
                 </div>
               </div>
